@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlashDeck</title>
+<style>
+:root{--bg:#fafaf9;--fg:#18181b;--card:#fff;--line:#deddd8;--acc:#2a78d6}
+body.dark{--bg:#18181b;--fg:#f4f4f5;--card:#27272a;--line:#3f3f46}
+body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+main{max-width:900px;margin:auto;padding:16px}section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+input,textarea,button{font:inherit;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+textarea{width:100%;box-sizing:border-box}button.p{background:var(--acc);color:#fff;border:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.m{opacity:.7;font-size:13px}.h{display:none}
+.card{min-height:160px;display:flex;align-items:center;justify-content:center;font-size:24px;text-align:center;border:2px solid var(--line);border-radius:12px;padding:20px;cursor:pointer;white-space:pre-wrap}
+</style></head><body>
+<header><h1 style="margin:0">FlashDeck</h1><div><button id="exp">Export</button> <input type="file" id="imp" accept=".json" title="Import backup"> <button id="dk">Dark</button></div></header>
+<main>
+<section id="home"><h2>Decks</h2><div id="decks"></div>
+<div class="row"><input id="dn" placeholder="New deck name"><button class="p" id="ad">Add deck</button></div><p class="m" id="st"></p></section>
+<section id="edit" class="h"><h2 id="et"></h2><textarea id="fr" placeholder="Front"></textarea><textarea id="bk" placeholder="Back"></textarea>
+<div class="row"><button class="p" id="ac">Add card</button><button id="bulk">Bulk add</button><button class="home">Back</button></div><div id="cards"></div></section>
+<section id="study" class="h"><h2 id="sh"></h2><p class="m" id="sl"></p><div class="card" id="sc"></div>
+<div class="row" id="gr" style="visibility:hidden"><button data-g="0">Again</button><button data-g="3">Hard</button><button data-g="4">Good</button><button data-g="5">Easy</button></div>
+<button class="home">Back</button></section>
+</main>
+<script>
+const K='flashdeck-v1',DAY=864e5,$=i=>document.getElementById(i);
+let S=JSON.parse(localStorage.getItem(K)||'{"decks":[],"dark":false,"log":{}}'),cur,q=[],shown;
+const save=()=>localStorage.setItem(K,JSON.stringify(S)),uid=()=>Math.random().toString(36).slice(2,10),td=()=>new Date().toISOString().slice(0,10);
+const esc=s=>s.replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const show=v=>['home','edit','study'].forEach(x=>$(x).classList.toggle('h',x!=v));
+const due=d=>d.cards.filter(c=>c.due<=Date.now()),deck=id=>S.decks.find(d=>d.id==id);
+function home(){show('home');
+$('decks').innerHTML=S.decks.map(d=>`<div class="row"><b>${esc(d.name)}</b><span class="m">${d.cards.length} cards, ${due(d).length} due</span><button class="p" onclick="study('${d.id}')">Study</button><button onclick="edit('${d.id}')">Edit</button><button onclick="del('${d.id}')">Delete</button></div>`).join('')||'<p class="m">No decks yet.</p>';
+let s=0,t=Date.now();while(S.log[new Date(t).toISOString().slice(0,10)]){s++;t-=DAY}
+$('st').textContent=`${S.decks.reduce((a,d)=>a+d.cards.length,0)} cards, ${S.log[td()]||0} reviewed today, ${s}-day streak`;}
+$('ad').onclick=()=>{const n=$('dn').value.trim();if(n){S.decks.push({id:uid(),name:n,cards:[]});$('dn').value='';save();home()}};
+function del(id){if(confirm('Delete deck?')){S.decks=S.decks.filter(d=>d.id!=id);save();home()}}
+const nc=(f,b)=>({id:uid(),f,b,ef:2.5,iv:0,rep:0,due:Date.now()});
+function edit(id){cur=deck(id);show('edit');$('et').textContent=cur.name;rc()}
+function rc(){$('cards').innerHTML=cur.cards.map(c=>`<div class="row">${esc(c.f)} &rarr; ${esc(c.b)} <span class="m">next ${new Date(c.due).toLocaleDateString()}</span><button onclick="dc('${c.id}')">Delete</button></div>`).join('')}
+$('ac').onclick=()=>{const f=$('fr').value.trim(),b=$('bk').value.trim();if(f&&b){cur.cards.push(nc(f,b));$('fr').value=$('bk').value='';save();rc()}};
+$('bulk').onclick=()=>{const t=prompt('One card per line: front | back');if(t){t.split('\n').forEach(l=>{const[f,b]=l.split('|').map(x=>x&&x.trim());if(f&&b)cur.cards.push(nc(f,b))});save();rc()}};
+function dc(id){cur.cards=cur.cards.filter(c=>c.id!=id);save();rc()}
+function study(id){cur=deck(id);q=due(cur).sort(()=>Math.random()-.5);show('study');$('sh').textContent=cur.name;nx()}
+function nx(){shown=0;$('gr').style.visibility='hidden';$('sl').textContent=q.length+' left';$('sc').textContent=q.length?q[0].f:'All caught up!'}
+$('sc').onclick=()=>{if(q.length&&!shown){shown=1;$('sc').textContent=q[0].f+'\n\n'+q[0].b;$('gr').style.visibility='visible'}};
+document.querySelectorAll('#gr button').forEach(b=>b.onclick=()=>{const g=+b.dataset.g,c=q.shift();
+if(g<3){c.rep=0;c.iv=0;q.push(c)}else{c.rep++;c.iv=c.rep==1?1:c.rep==2?6:Math.round(c.iv*c.ef)}
+c.ef=Math.max(1.3,c.ef+.1-(5-g)*(.08+(5-g)*.02));c.due=Date.now()+c.iv*DAY;S.log[td()]=(S.log[td()]||0)+1;save();nx()});
+document.querySelectorAll('.home').forEach(b=>b.onclick=home);
+$('dk').onclick=()=>{S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);save()};
+$('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)]));a.download='flashdeck-backup.json';a.click()};
+$('imp').onchange=e=>e.target.files[0].text().then(t=>{try{const d=JSON.parse(t);if(!Array.isArray(d.decks))throw 0;S=d;save();home()}catch(x){alert('Invalid backup')}});
+document.body.classList.toggle('dark',!!S.dark);home();
+</script></body></html>

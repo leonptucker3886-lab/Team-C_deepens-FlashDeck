@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FlashDeck</title>
+<title>FlashDeck · Spaced-repetition flashcards | LeonLink</title>
+<meta name="description" content="FlashDeck: simple flashcards with spaced repetition. Make decks, study what is due, keep a streak. Works offline, data stays on your device.">
+<meta property="og:title" content="FlashDeck · Flashcards that remember for you">
+<meta property="og:description" content="Spaced-repetition flashcards. Study only what is due.">
+<meta name="theme-color" content="#2a78d6">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%83%8F%3C/text%3E%3C/svg%3E">
 <style>
 :root{--bg:#fafaf9;--fg:#18181b;--card:#fff;--line:#deddd8;--acc:#2a78d6}
 body.dark{--bg:#18181b;--fg:#f4f4f5;--card:#27272a;--line:#3f3f46}
@@ -10,10 +15,12 @@ main{max-width:900px;margin:auto;padding:16px}section{background:var(--card);bor
 input,textarea,button{font:inherit;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
 textarea{width:100%;box-sizing:border-box}button.p{background:var(--acc);color:#fff;border:0}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center}.m{opacity:.7;font-size:13px}.h{display:none}
+.intro{background:linear-gradient(135deg,#2a78d6,#6a4bd6);color:#fff;border:0;margin-bottom:14px}.intro h2{margin:.2em 0}.intro ol{margin:.4em 0 .6em 1.2em;padding:0}.intro button{background:#fff;color:#2a78d6;border:0}footer{text-align:center;padding:24px;opacity:.7;font-size:13px}footer a{color:var(--acc)}kbd{border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12px}
 .card{min-height:160px;display:flex;align-items:center;justify-content:center;font-size:24px;text-align:center;border:2px solid var(--line);border-radius:12px;padding:20px;cursor:pointer;white-space:pre-wrap}
 </style></head><body>
 <header><h1 style="margin:0">FlashDeck</h1><div><button id="exp">Export</button> <input type="file" id="imp" accept=".json" title="Import backup"> <button id="dk">Dark</button></div></header>
 <main>
+<section id="intro" class="intro"><h2>Welcome to FlashDeck</h2><p>Flashcards that schedule themselves. Study only the cards that are due, and FlashDeck spaces out the ones you know.</p><ol><li>Create a deck (or try the sample deck below).</li><li>Add cards, one at a time or in bulk (<code>front | back</code>).</li><li>Hit <b>Study</b>, tap the card to flip, then rate it Again / Hard / Good / Easy.</li></ol><p style="font-size:13px;opacity:.9">Keyboard: <kbd>Space</kbd> flip · <kbd>1</kbd>-<kbd>4</kbd> rate. Your data stays in this browser; use Export to back up.</p><button id="gotit">Got it, let's study</button></section>
 <section id="home"><h2>Decks</h2><div id="decks"></div>
 <div class="row"><input id="dn" placeholder="New deck name"><button class="p" id="ad">Add deck</button></div><p class="m" id="st"></p></section>
 <section id="edit" class="h"><h2 id="et"></h2><textarea id="fr" placeholder="Front"></textarea><textarea id="bk" placeholder="Back"></textarea>
@@ -22,6 +29,7 @@ textarea{width:100%;box-sizing:border-box}button.p{background:var(--acc);color:#
 <div class="row" id="gr" style="visibility:hidden"><button data-g="0">Again</button><button data-g="3">Hard</button><button data-g="4">Good</button><button data-g="5">Easy</button></div>
 <button class="home">Back</button></section>
 </main>
+<footer>FlashDeck · $4.99 one-time · part of <a href="https://www.leonlink.net/">LeonLink</a></footer>
 <script>
 const K='flashdeck-v1',DAY=864e5,$=i=>document.getElementById(i);
 let S=JSON.parse(localStorage.getItem(K)||'{"decks":[],"dark":false,"log":{}}'),cur,q=[],shown;
@@ -37,7 +45,7 @@ $('ad').onclick=()=>{const n=$('dn').value.trim();if(n){S.decks.push({id:uid(),n
 function del(id){if(confirm('Delete deck?')){S.decks=S.decks.filter(d=>d.id!=id);save();home()}}
 const nc=(f,b)=>({id:uid(),f,b,ef:2.5,iv:0,rep:0,due:Date.now()});
 function edit(id){cur=deck(id);show('edit');$('et').textContent=cur.name;rc()}
-function rc(){$('cards').innerHTML=cur.cards.map(c=>`<div class="row">${esc(c.f)} &rarr; ${esc(c.b)} <span class="m">next ${new Date(c.due).toLocaleDateString()}</span><button onclick="dc('${c.id}')">Delete</button></div>`).join('')}
+function rc(){$('cards').innerHTML=cur.cards.map(c=>`<div class="row">${esc(c.f)} &rarr; ${esc(c.b)} <span class="m">next ${new Date(c.due).toLocaleDateString()}</span><button onclick="ec('${c.id}')">Edit</button><button onclick="dc('${c.id}')">Delete</button></div>`).join('')}
 $('ac').onclick=()=>{const f=$('fr').value.trim(),b=$('bk').value.trim();if(f&&b){cur.cards.push(nc(f,b));$('fr').value=$('bk').value='';save();rc()}};
 $('bulk').onclick=()=>{const t=prompt('One card per line: front | back');if(t){t.split('\n').forEach(l=>{const[f,b]=l.split('|').map(x=>x&&x.trim());if(f&&b)cur.cards.push(nc(f,b))});save();rc()}};
 function dc(id){cur.cards=cur.cards.filter(c=>c.id!=id);save();rc()}
@@ -51,5 +59,11 @@ document.querySelectorAll('.home').forEach(b=>b.onclick=home);
 $('dk').onclick=()=>{S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);save()};
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)]));a.download='flashdeck-backup.json';a.click()};
 $('imp').onchange=e=>e.target.files[0].text().then(t=>{try{const d=JSON.parse(t);if(!Array.isArray(d.decks))throw 0;S=d;save();home()}catch(x){alert('Invalid backup')}});
+
+if(!S.seeded){S.seeded=1;if(!S.decks.length)S.decks.push({id:uid(),name:'Sample: World capitals',cards:[['France','Paris'],['Japan','Tokyo'],['Canada','Ottawa'],['Australia','Canberra'],['Brazil','Brasília'],['Kenya','Nairobi']].map(([f,b])=>nc(f,b))});save()}
+if(S.introSeen)$('intro').classList.add('h');
+$('gotit').onclick=()=>{S.introSeen=1;save();$('intro').classList.add('h')};
+function ec(id){const c=cur.cards.find(x=>x.id==id);const f=prompt('Front',c.f);if(f===null)return;const b=prompt('Back',c.b);if(b===null)return;if(f.trim()&&b.trim()){c.f=f.trim();c.b=b.trim();save();rc()}}
+document.addEventListener('keydown',e=>{if($('study').classList.contains('h')||/INPUT|TEXTAREA/.test(e.target.tagName))return;if(e.code=='Space'){e.preventDefault();$('sc').click()}else if(shown&&'1234'.includes(e.key)){document.querySelectorAll('#gr button')[+e.key-1].click()}});
 document.body.classList.toggle('dark',!!S.dark);home();
 </script></body></html>
